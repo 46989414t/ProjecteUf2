@@ -1,11 +1,14 @@
 package com.projecteuf2.projecteuf2;
 
-import android.support.v4.app.Fragment;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
-import android.view.View;
 import android.support.design.widget.NavigationView;
+import android.support.design.widget.Snackbar;
+import android.support.v4.app.Fragment;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -13,17 +16,35 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+
+import com.firebase.client.Firebase;
+
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class MenuPrincipal extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
         Fragment fragment;
+    static final int REQUEST_TAKE_PHOTO = 1;
+
+        //static Firebase myFirebase = new Firebase("https://pruebaparafirebase.firebaseio.com/");
+
+    String mCurrentPhotoPath;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_menu_principal);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        Firebase.setAndroidContext(this);
+        Firebase myFirebase = new Firebase("https://pruebaparafirebase.firebaseio.com/");
+
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -92,21 +113,6 @@ public class MenuPrincipal extends AppCompatActivity
             fragment = new BlankFragment();
             transaccion = true;
 
-            //Paso 1: Obtener la instancia del administrador de fragmentos
-           /* FragmentManager fragmentManager = getFragmentManager();
-            Fragment blanc = fragmentManager.findFragmentById(R.id.contendorFormulario);
-
-            //Paso 2: Crear una nueva transacción
-            FragmentTransaction transaction = fragmentManager.beginTransaction();
-
-            //Paso 3: Crear un nuevo fragmento y añadirlo
-            BlankFragment fragment = new BlankFragment();
-            transaction.add(R.id.contendorFormulario, new BlankFragment())
-
-            //Paso 4: Confirmar el cambio
-            transaction.commit();*/
-
-
         } else if (id == R.id.nav_slideshow) {
             
 
@@ -132,4 +138,115 @@ public class MenuPrincipal extends AppCompatActivity
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
+
+    public void onToFotoPerfil(View view) throws IOException {
+        Firebase myFirebase = new Firebase("https://pruebaparafirebase.firebaseio.com/");
+        dispatchTakePictureIntent();
+
+        /*
+
+        //Creamos el Intent para llamar a la Camara
+        Intent cameraIntent = new Intent(
+                android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+        //Creamos una carpeta en la memeria del terminal
+        File imagesFolder = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES);
+
+        if(!imagesFolder.exists()) {
+            imagesFolder.mkdirs();
+            System.out.println("CARPETA CREADA: "+imagesFolder);
+        }
+        System.out.println("LA CARPETA EXISTE: " + imagesFolder);
+        //añadimos el nombre de la imagen
+        String name = getCode()+".jpg";
+        File image = new File(imagesFolder, name);
+        Uri uriSavedImage = Uri.fromFile(image);
+        //Le decimos al Intent que queremos grabar la imagen
+        cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, uriSavedImage);
+        System.out.println("IMAGEN SE GUARDADARA EN: " + uriSavedImage);
+        //Lanzamos la aplicacion de la camara con retorno (forResult)
+        startActivityForResult(cameraIntent, 1);
+
+*/
+/*
+        //subir a FIREBASE
+        //Bitmap bmp =  BitmapFactory.decodeResource(getResources(), R.drawable.chicken);//your image
+        Bitmap bmp =  BitmapFactory.decodeFile(String.valueOf(uriSavedImage));
+
+        ByteArrayOutputStream bYtE = new ByteArrayOutputStream();
+        bmp.compress(Bitmap.CompressFormat.JPEG, 100, bYtE);
+        bmp.recycle();
+        byte[] byteArray = bYtE.toByteArray();
+        String imageFile = Base64.encodeToString(byteArray, Base64.DEFAULT);
+        myFirebase.child("photo_"+name).setValue(imageFile);
+*/
+        }
+
+    /*private String getCode() {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyymmddhhmmss");
+        String date = dateFormat.format(new Date());
+        String photoCode = "pic_" + date;
+        return photoCode;
+    }*/
+
+    private File createImageFile() throws IOException {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File storageDir = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES);
+        if(!storageDir.exists()){
+            System.out.println("CREAR EL DIRECTORIO");
+            storageDir.mkdirs();
+        }else{
+            System.out.println("EL DIRECTORIO YA EXISTE");
+        }
+
+        File image = File.createTempFile(
+                imageFileName,  /* prefix */
+                ".jpg",         /* suffix */
+                storageDir      /* directory */
+        );
+
+        // Save a file: path for use with ACTION_VIEW intents
+        mCurrentPhotoPath = image.getAbsolutePath();
+        System.out.println("FOTO GUARDADA EN: "+mCurrentPhotoPath);
+        return image;
+    }
+
+    private void dispatchTakePictureIntent() {
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        // Ensure that there's a camera activity to handle the intent
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+            // Create the File where the photo should go
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            } catch (IOException ex) {
+                // Error occurred while creating the File
+
+            }
+            // Continue only if the File was successfully created
+            if (photoFile != null) {
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,Uri.fromFile(photoFile));
+                startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
+            }
+        }
+    }
+/*
+    public void imageToFirebase(){
+
+        Firebase myFirebase = new Firebase("https://pruebaparafirebase.firebaseio.com/");
+
+        Bitmap bmp =  BitmapFactory.decodeResource(getResources(),
+                R.drawable.panda);//your image
+        ByteArrayOutputStream bYtE = new ByteArrayOutputStream();
+        bmp.compress(Bitmap.CompressFormat.PNG, 100, bYtE);
+        bmp.recycle();
+        byte[] byteArray = bYtE.toByteArray();
+        String imageFile = Base64.encodeToString(byteArray, Base64.DEFAULT);
+
+        myFirebase.child("photo_").setValue(imageFile);
+    }*/
+
 }
